@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.env
+geospatial.db
+*.sqlite3
+storage/uploads/*
+storage/extracted/*
+!storage/uploads/*
+!storage/extracted/*
+.vscode/
+.idea/
+.DS_Store

@@ -1,0 +1,64 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: geospatial
+      POSTGRES_USER: geospatial
+      POSTGRES_PASSWORD: geospatial
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U geospatial -d geospatial"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  init:
+    build: .
+    command: ["python", "-m", "app.init_db"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://geospatial:geospatial@db:5432/geospatial
+      STORAGE_DIR: /app/storage
+      EMBEDDED_WORKER: "false"
+      MAX_UPLOAD_SIZE_MB: "100"
+      MAX_EXTRACTED_SIZE_MB: "500"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://geospatial:geospatial@db:5432/geospatial
+      STORAGE_DIR: /app/storage
+      EMBEDDED_WORKER: "false"
+      MAX_UPLOAD_SIZE_MB: "100"
+      MAX_EXTRACTED_SIZE_MB: "500"
+    ports:
+      - "8000:8000"
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      init:
+        condition: service_completed_successfully
+
+  worker:
+    build: .
+    command: ["python", "-m", "app.worker"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://geospatial:geospatial@db:5432/geospatial
+      STORAGE_DIR: /app/storage
+      EMBEDDED_WORKER: "false"
+      MAX_UPLOAD_SIZE_MB: "100"
+      MAX_EXTRACTED_SIZE_MB: "500"
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  app_storage:
